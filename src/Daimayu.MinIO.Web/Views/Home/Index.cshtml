@@ -1,0 +1,42 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+@model List<DownloadItem>
+<div class="container">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <form method="post" action="@Url.Action("Upload","Home")" enctype="multipart/form-data">
+        <div class="row">
+            <div class="mb-3 form-inline col-11">
+                <input class="form-control" type="file" name="file" >
+            </div>
+            <div class="col-1 form-inline "><button type="submit" class="btn btn-primary">Upload</button></div>
+        </div>
+        
+    </form>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <td>ETag</td>
+                <td>Key</td>
+                <td>Size</td>
+                <td>Last Modified DateTime</td>
+                <td>Action</td>
+            </tr>
+            
+        </thead>
+        <tbody>
+            @foreach (var x in Model)
+            {
+            <tr>
+                <td>@x.ETag</td>
+                <td>@x.Key</td>
+                <td>@Math.Round(x.Size / 1024d / 1024d,2) MB</td>
+                <td>@x.LastModifiedDateTime</td>
+                <td><a href="@x.DownloadUrl" target="_blank">Download</a> | <a href="@Url.Action("Delete","Home",new { objectName=x.Key })" target="_blank">Delete</a></td>
+            </tr>
+            }
+
+        </tbody>
+    </table>
+</div>
