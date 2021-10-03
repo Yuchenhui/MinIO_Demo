@@ -1,0 +1,50 @@
+version: "3.8"
+services:
+  tika:
+    image: tika:1.0.211002.4
+    command: -c /tika-config.xml
+    restart: on-failure
+    ports:
+      - "9003:9998"
+    container_name: tika
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: admin123
+      MINIO_REGION: us-east-1
+    command: server --console-address ':9001' /data
+    privileged: true
+    restart: on-failure
+  elasticsearch:
+    image: elasticsearch:7.14.1
+    container_name: elk-es
+    restart: on-failure
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+  cerebro:
+    image: lmenezes/cerebro:latest
+    container_name: cerebro
+    restart: on-failure
+    ports:
+      - "9002:9000"
+    command:
+      - -Dhosts.0.host=http://elk-es:9200
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    restart: on-failure
+    container_name: mongo

@@ -1,11 +1,15 @@
+using Daimayu.MinIO.Web.Models;
+using Daimayu.MinIO.Web.Service;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Minio.AspNetCore;
+using Nest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,8 +33,11 @@ namespace Daimayu.MinIO.Web
             var sk = Configuration["MinIO:SecretKey"];
             var en = Configuration["MinIO:Endpoint"];
             var reg = Configuration["MinIO:Region"];
-
+            services.AddHttpClient();
             services.AddControllersWithViews();
+
+            var settings = Configuration.GetSection("Mongo").Get<MongoSettings>();
+            services.AddSingleton(settings);
 
             services.AddMinio(options =>
             {
@@ -51,6 +58,8 @@ namespace Daimayu.MinIO.Web
                 x.MultipartBodyLengthLimit = int.MaxValue;
                 x.MultipartHeadersLengthLimit = int.MaxValue;
             });
+
+            services.AddTransient<IDataService, DataService>();
 
         }
 

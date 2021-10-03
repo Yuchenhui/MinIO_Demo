@@ -1,42 +1,72 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
 }
-@model List<DownloadItem>
+@model List<StoredItem>
 <div class="container">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-    <form method="post" action="@Url.Action("Upload","Home")" enctype="multipart/form-data">
-        <div class="row">
-            <div class="mb-3 form-inline col-11">
-                <input class="form-control" type="file" name="file" >
+    <div class="row">
+        <form class="col-8" method="post" action="@Url.Action("Upload","Home")" enctype="multipart/form-data">
+            <div class="input-group">
+                <input type="file" name="file" class="form-control w-50" aria-label="Text input with segmented dropdown button">
+                <select class="form-select" name="lang">
+                    <option selected>Choose Lang</option>
+                    <option value="eng">English</option>
+                    <option value="chi_sim">Simplified Chinese</option>
+                    <option value="chi_tra">Traditional Chinese</option>
+                </select>
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-outline-secondary">Upload</button>
+                </div>
             </div>
-            <div class="col-1 form-inline "><button type="submit" class="btn btn-primary">Upload</button></div>
+        </form>
+
+        <div class="col-4">
+            <div class="input-group">
+                <input type="text" id="searchTxt" class="form-control" aria-label="Text input with segmented dropdown button" value="@ViewBag.Keyword" placeholder="Input keyword">
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" id="searchBtn">Search</button>
+                </div>
+            </div>
         </div>
-        
-    </form>
+    </div>
     <table class="table table-striped">
         <thead>
             <tr>
-                <td>ETag</td>
-                <td>Key</td>
+                <td>#</td>
+                <td>File name</td>
                 <td>Size</td>
                 <td>Last Modified DateTime</td>
+                <td>Status</td>
                 <td>Action</td>
             </tr>
-            
+
         </thead>
         <tbody>
             @foreach (var x in Model)
             {
             <tr>
-                <td>@x.ETag</td>
-                <td>@x.Key</td>
-                <td>@Math.Round(x.Size / 1024d / 1024d,2) MB</td>
-                <td>@x.LastModifiedDateTime</td>
-                <td><a href="@x.DownloadUrl" target="_blank">Download</a> | <a href="@Url.Action("Delete","Home",new { objectName=x.Key })" target="_blank">Delete</a></td>
+                <td>@x.Number</td>
+                <td>@x.FileName</td>
+                <td>@Math.Round(x.FileLength / 1024d / 1024d, 2) MB</td>
+                <td>@x.CreateTime</td>
+                <td>@x.FileStatus.ToString()</td>
+                <td><a href="@x.DownloadUrl" target="_blank" download="@x.FileName">Download</a> | <a href="@Url.Action("Delete","Home",new { objectName=x.FileId })" target="_blank">Delete</a></td>
             </tr>
             }
 
         </tbody>
     </table>
 </div>
+@section Scripts{
+
+    <script type="text/javascript">
+
+    $(document).ready(function () {
+        $("#searchBtn").click(function () {
+            var keyword = $("#searchTxt").val();
+            window.location.href = "@Url.Action("Index","Home")?keyword=" + keyword;
+        });
+    });
+
+    </script>
+
+ }
