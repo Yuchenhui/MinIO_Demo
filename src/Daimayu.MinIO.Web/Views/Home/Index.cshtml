@@ -43,13 +43,19 @@
         <tbody>
             @foreach (var x in Model)
             {
+                var preview = "";
+                if (x.IsPreview)
+                {
+                    preview = " | <a href=\"" + Url.Action("Preview", "Home", new { fileId = x.FileId, keyword = ViewBag.Keyword, type = x.PreviewType }) + "\"  target=\"_blank\">Preview</a>";
+                }
+
             <tr>
                 <td>@x.Number</td>
                 <td>@x.FileName</td>
                 <td>@Math.Round(x.FileLength / 1024d / 1024d, 2) MB</td>
                 <td>@x.CreateTime</td>
                 <td>@x.FileStatus.ToString()</td>
-                <td><a href="@x.DownloadUrl" target="_blank" download="@x.FileName">Download</a> | <a href="@Url.Action("Delete","Home",new { objectName=x.FileId })" target="_blank">Delete</a></td>
+                <td><a href="@x.DownloadUrl" target="_blank" download="@x.FileName">Download</a> | <a href="@Url.Action("Delete", "Home", new { objectName = x.FileId })" target="_blank">Delete</a>@Html.Raw(preview)</td>
             </tr>
             }
 

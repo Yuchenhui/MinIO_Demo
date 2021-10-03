@@ -1,5 +1,91 @@
 ﻿@*
     For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 *@
+@model StoredItem
 @{
+    Layout = null;
+    var filePath = Model.DownloadUrl;
+    var fileType = ViewBag.PreviewType;
+    var keyword = ViewBag.Keyword;
 }
+<!DOCTYPE html>
+<html>
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <title>Preview - @Model.FileName</title>
+    <link href="~/lib/flv/demo.css" rel="stylesheet" />
+</head>
+<body>
+    @if (fileType == "pdf")
+    {
+        <iframe style="width:100%;height:100%" id="pdf"></iframe>
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script type="text/javascript">
+        var keyword = '@Html.Raw(keyword)';
+        $('#pdf').attr('src', '/lib/pdfjs/web/viewer.html?file=' + encodeURIComponent('@filePath') + '&keyword=' + keyword);
+        </script>
+
+    }
+    else if (fileType == "image")
+    {
+        <img src="@filePath" />
+    }
+    else
+    {
+
+        <div class="mainContainer">
+            <div class="video-container">
+                <div>
+                    <video name="videoElement" class="centeredVideo" controls autoplay>
+                        Your browser is too old which doesn't support HTML5 video.
+                    </video>
+                </div>
+            </div>
+        </div>
+
+        <script src="~/lib/flv/flv.min.js"></script>
+
+        <script>
+        var checkBoxFields = ['hasAudio', 'hasVideo'];
+        var  mediaSourceURL;
+            function flv_load() {
+
+                var i;
+                var mediaDataSource = {
+                    type: '@Model.FileType.Replace(".","")'
+                };
+                for (i = 0; i < checkBoxFields.length; i++) {
+                    var field = checkBoxFields[i];
+                    mediaDataSource[field] = true;
+                }
+                mediaDataSource['url'] = '@filePath';
+                flv_load_mds(mediaDataSource);
+            }
+
+            function flv_load_mds(mediaDataSource) {
+                var element = document.getElementsByName('videoElement')[0];
+                if (typeof player !== "undefined") {
+                    if (player != null) {
+                        player.unload();
+                        player.detachMediaElement();
+                        player.destroy();
+                        player = null;
+                    }
+                }
+                player = flvjs.createPlayer(mediaDataSource, {
+                    enableWorker: false,
+                    lazyLoadMaxDuration: 3 * 60,
+                    seekType: 'range',
+                });
+                player.attachMediaElement(element);
+                player.load();
+            }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            mediaSourceURL = '@filePath';
+            flv_load();
+        });
+        </script>
+    }
+</body>
+</html>

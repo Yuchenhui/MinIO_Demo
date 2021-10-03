@@ -26,6 +26,7 @@ namespace Daimayu.MinIO.Web.Controllers
         private readonly string _endpoint;
         private readonly List<string> _indexedType;
         private readonly List<string> _previewType;
+        private readonly Dictionary<string, string> _mediaType;
         private readonly IDataService _dataService;
         public HomeController(IDataService dataService,ILogger<HomeController> logger, MinioClient client,
             IConfiguration configuration)
@@ -37,6 +38,7 @@ namespace Daimayu.MinIO.Web.Controllers
             _region = configuration["MinIO:Region"];
             _indexedType = configuration.GetSection("IndexedType").Get<string[]>().ToList();
             _previewType = configuration.GetSection("PreviewType").Get<string[]>().ToList();
+            _mediaType = configuration.GetSection("MediaType").Get<Dictionary<string,string>>();
             _dataService = dataService;
         }
 
@@ -66,7 +68,7 @@ namespace Daimayu.MinIO.Web.Controllers
 
         [HttpPost]
         [DisableRequestSizeLimit]
-        public async Task<IActionResult> UploadAsync([FromForm(Name = "file")] IFormFile file,string desc,string lang)
+        public async Task<IActionResult> UploadAsync([FromForm(Name = "file")] IFormFile file,string lang)
         {
             if (file != null)
             {
@@ -74,6 +76,11 @@ namespace Daimayu.MinIO.Web.Controllers
                 var indexed = _indexedType.Contains(type);
                 var previewed = _previewType.Contains(type);
                 var fileId = Guid.NewGuid().ToString("N");
+                var previewType = "";
+                if (previewed && _mediaType.ContainsKey(type))
+                {
+                    previewType = _mediaType[type];
+                }
                 FileStatus status = FileStatus.Uploading;
                 var item = new StoredItem()
                 {
@@ -83,7 +90,7 @@ namespace Daimayu.MinIO.Web.Controllers
                     FileContentType = MimeTypeMap.GetMimeType(type),
                     Chunk = 1,
                     FileId = fileId,
-                    FileDesc = desc,
+                    FileDesc = file.FileName.Replace(".", " "),
                     FileLength = file.Length,
                     FileName = file.FileName,
                     FileStatus = status,
@@ -92,28 +99,34 @@ namespace Daimayu.MinIO.Web.Controllers
                     Number = DateTime.UtcNow.Ticks,
                     IsPreview = previewed,
                     Lang = lang,
-                    FileType = type
+                    FileType = type,
+                    PreviewType = previewType
                 };
 
                 var saved = _dataService.Create(item);
                 if (saved)
                 {
-                    await _client.PutObjectAsync(_bucket, fileId+item.FileType, file.OpenReadStream(), file.Length);
+                    await _client.PutObjectAsync(_bucket, fileId + item.FileType, file.OpenReadStream(), file.Length);
                     if (indexed)
                     {
-                        _dataService.UpdateStatus(fileId, FileStatus.PendingExtract);
-                        var content = await _dataService.CallTikaAsync(fileId);
-                        _dataService.UpdateStatus(fileId, FileStatus.Indexed);
-                        item.Content = content;                       
+                        _dataService.UpdateStatus(item.FileId, FileStatus.PendingExtract);
+                        _ = CallTika(item);
                     }
                     else
                     {
-                        _dataService.UpdateStatus(fileId, FileStatus.Uploaded);
+                        _dataService.UpdateStatus(item.FileId, FileStatus.Uploaded);
+                        _dataService.BuildIndex(item);
                     }
-                    _dataService.BuildIndex(item);
                 }
             }
             return RedirectToAction("Index");
+        }
+
+        private async Task CallTika(StoredItem item)
+        {
+            item.Content = await _dataService.CallTikaAsync(item.FileId);
+            _dataService.UpdateStatus(item.FileId, FileStatus.Indexed);
+            _dataService.BuildIndex(item);
         }
 
         public async Task<IActionResult> DeleteAsync(string objectName)
@@ -122,12 +135,13 @@ namespace Daimayu.MinIO.Web.Controllers
             return RedirectToAction("Index");
         }
 
-        public IActionResult Preview(string type,string fileId)
+        public IActionResult Preview(string type,string fileId,string keyword)
         {
             var item = _dataService.Get(fileId);
             item.DownloadUrl = $"http://{_endpoint}/{_bucket}/{fileId}{item.FileType}";
             ViewBag.PreviewType = type;
-            return View();
+            ViewBag.Keyword = keyword;
+            return View(item);
         }
 
         public IActionResult Privacy()

@@ -91,6 +91,7 @@ namespace Daimayu.MinIO.Web.Service
                 request.Headers.Add("X-Tika-OCRLanguage", item.Lang);
                 request.Headers.Add("fetcherName", "http");
                 request.Headers.Add("fetchKey", $"http://{_minioHost}/{item.Bucket}/{item.FileId}{item.FileType}");
+                client.Timeout = TimeSpan.MaxValue;
                 var resp = await client.SendAsync(request);
                 var result = await resp.Content.ReadAsStringAsync();
                 var html = "";

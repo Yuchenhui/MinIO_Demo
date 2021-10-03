@@ -34,6 +34,7 @@ namespace Daimayu.MinIO.Web.Models
         public bool IsDeleted { get; set; }
         public bool IsIndexed { get; set; }
         public bool IsPreview { get; set; }
+        public string PreviewType { get; set; }
         public string Content { get; set; }
         public string DownloadUrl { get; set; }
     }
