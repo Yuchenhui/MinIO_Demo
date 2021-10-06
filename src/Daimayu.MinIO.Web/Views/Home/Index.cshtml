@@ -2,19 +2,35 @@
     ViewData["Title"] = "Home Page";
 }
 @model List<StoredItem>
+@section Styles{ 
+<style type="text/css">
+
+    .not-active {
+        pointer-events: none;
+        cursor: default;
+    }
+
+</style>
+}
 <div class="container">
     <div class="row">
-        <form class="col-8" method="post" action="@Url.Action("Upload","Home")" enctype="multipart/form-data">
+        <form class="col-8" method="post" action="@Url.Action("Upload","Home")" enctype="multipart/form-data" id="uploadForm">
             <div class="input-group">
-                <input type="file" name="file" class="form-control w-50" aria-label="Text input with segmented dropdown button">
-                <select class="form-select" name="lang">
+                <input type="file" name="file" id="uploadFile" class="form-control w-50" aria-label="Text input with segmented dropdown button">
+                <select class="form-select" name="lang" id="langSel">
                     <option selected>Choose Lang</option>
                     <option value="eng">English</option>
                     <option value="chi_sim">Simplified Chinese</option>
                     <option value="chi_tra">Traditional Chinese</option>
                 </select>
                 <div class="input-group-append">
-                    <button type="submit" class="btn btn-outline-secondary">Upload</button>
+
+                    <button type="button" class="btn btn-outline-secondary" id="uploadBtn">Upload</button>
+                    <button type="submit" style="display:none" id="submitBtn">Upload</button>
+                    <button class="btn btn-outline-secondary" type="button" disabled id="loadingBtn" style="display:none">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span class="visually-hidden">Loading...</span>
+                    </button>
                 </div>
             </div>
         </form>
@@ -28,39 +44,46 @@
             </div>
         </div>
     </div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <td>#</td>
-                <td>File name</td>
-                <td>Size</td>
-                <td>Last Modified DateTime</td>
-                <td>Status</td>
-                <td>Action</td>
-            </tr>
+    <div class="row" style="height:20px;"></div>
+    <div class="row table-responsive">
+        <table class="table  table-hover">
+            <caption>List of files</caption>
+            <thead style="background-color: #e45c2b; color: white ">
+                <tr>
+                    <td>File name</td>
+                    <td>Size</td>
+                    <td>DateTime</td>
+                    <td>Status</td>
+                    <td>Action</td>
+                </tr>
 
-        </thead>
-        <tbody>
-            @foreach (var x in Model)
-            {
-                var preview = "";
-                if (x.IsPreview)
+            </thead>
+            <tbody>
+                @foreach (var x in Model)
                 {
-                    preview = " | <a href=\"" + Url.Action("Preview", "Home", new { fileId = x.FileId, keyword = ViewBag.Keyword, type = x.PreviewType }) + "\"  target=\"_blank\">Preview</a>";
+                    var preview = "";
+                    var extract = "";
+                    if (x.IsPreview)
+                    {
+                        preview = " <a href=\"" + Url.Action("Preview", "Home", new { fileId = x.FileId, keyword = ViewBag.Keyword, type = x.PreviewType }) + "\"  target=\"_blank\">Preview</a>";
+                    }
+                    if(x.FileStatus == FileStatus.Uploaded && x.IsIndexed == true)
+                    {
+                        extract = " <a href=\"" + Url.Action("Extracting", "Home", new { fileId = x.FileId }) + "\" >Extract</a>";
+                }
+                    <tr>
+                        <td style="word-break:break-all">@x.FileName</td>
+                        <td>@Math.Round(x.FileLength / 1024d / 1024d, 2) MB</td>
+                        <td>@x.CreateTime</td>
+                        <td>@x.FileStatus.ToString()</td>
+                        <td class="actionTd"><a href="@x.DownloadUrl" target="_blank" download="@x.FileName">Download</a> <a href="@Url.Action("Delete", "Home", new { fileId = x.FileId })">Delete</a>@Html.Raw(preview) @Html.Raw(extract)</td>
+                    </tr>
                 }
 
-            <tr>
-                <td>@x.Number</td>
-                <td>@x.FileName</td>
-                <td>@Math.Round(x.FileLength / 1024d / 1024d, 2) MB</td>
-                <td>@x.CreateTime</td>
-                <td>@x.FileStatus.ToString()</td>
-                <td><a href="@x.DownloadUrl" target="_blank" download="@x.FileName">Download</a> | <a href="@Url.Action("Delete", "Home", new { objectName = x.FileId })" target="_blank">Delete</a>@Html.Raw(preview)</td>
-            </tr>
-            }
+            </tbody>
+        </table>
+    </div>
 
-        </tbody>
-    </table>
 </div>
 @section Scripts{
 
@@ -70,6 +93,24 @@
         $("#searchBtn").click(function () {
             var keyword = $("#searchTxt").val();
             window.location.href = "@Url.Action("Index","Home")?keyword=" + keyword;
+        });
+
+        $("#searchTxt").keyup(function (event) {
+            var key = event.keyCode;
+            if (key == 13) {
+                $("#searchBtn").click();
+            }
+        });
+
+        $("#uploadBtn").click(function (e) {
+            $("#uploadBtn").hide();
+            $("#submitBtn").click();
+            $("#uploadFile").prop("disabled", "disabled");
+            $("#searchTxt").prop("disabled", "disabled");
+            $("#searchBtn").prop("disabled", "disabled");
+            $("#langSel").prop("disabled", "disabled");
+            $(".actionTd").find("a").addClass("not-active").attr("onclick","javascript:void(0);");
+            $("#loadingBtn").show();
         });
     });
 

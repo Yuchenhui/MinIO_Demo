@@ -54,7 +54,7 @@ namespace Daimayu.MinIO.PdfCreator
             pdfEditor.Concatenate(list.ToArray(), "merged.pdf");
         }
 
-        public static async Task TikaAsync()
+        public static Task TikaAsync()
         {
             using (HttpClient client = new HttpClient())
             {
@@ -77,6 +77,7 @@ namespace Daimayu.MinIO.PdfCreator
                 //var result = await client.GetAsync("http://192.168.182.1");
             }
 
+            return Task.CompletedTask;
         }
     }
 

@@ -28,6 +28,7 @@ namespace Daimayu.MinIO.Web.Controllers
         private readonly List<string> _previewType;
         private readonly Dictionary<string, string> _mediaType;
         private readonly IDataService _dataService;
+        private readonly int _tikaMaxSize;
         public HomeController(IDataService dataService,ILogger<HomeController> logger, MinioClient client,
             IConfiguration configuration)
         {
@@ -39,25 +40,27 @@ namespace Daimayu.MinIO.Web.Controllers
             _indexedType = configuration.GetSection("IndexedType").Get<string[]>().ToList();
             _previewType = configuration.GetSection("PreviewType").Get<string[]>().ToList();
             _mediaType = configuration.GetSection("MediaType").Get<Dictionary<string,string>>();
+            _tikaMaxSize = configuration.GetValue<int>("Tika:MaxSize");
             _dataService = dataService;
         }
 
-        public async Task<IActionResult> IndexAsync(string keyword)
+        public IActionResult Index(string keyword)
         {
-            bool found = await _client.BucketExistsAsync(_bucket);
-            if (!found)
-            {
-                await _client.MakeBucketAsync(_bucket);
-                var jsonStr = "{\"Statement\":[{\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Resource\":[\"arn:aws:s3:::" + _bucket + "\"]},{\"Action\":[\"s3:GetObject\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Resource\":[\"arn:aws:s3:::" + _bucket + "/*\"]}],\"Version\":\"2012-10-17\"}";
-                await _client.SetPolicyAsync(_bucket, jsonStr);
-            }
-
-            var fileIds = _dataService.SearchIndex(keyword);
             var data = new List<StoredItem>();
-            if (string.IsNullOrEmpty(keyword) || fileIds.Any())
+
+            if (string.IsNullOrEmpty(keyword))
             {
+                data = _dataService.List();
+            }
+            else
+            {
+                var fileIds = _dataService.SearchIndex(keyword);
                 data = _dataService.List(fileIds);
-                data.ForEach(async d => {
+            }
+            if(data!=null && data.Any())
+            {
+                data.ForEach(async d =>
+                {
                     var url = await _client.PresignedGetObjectAsync(_bucket, d.FileId + d.FileType, 3600 * 24 * 7);
                     d.DownloadUrl = url;
                 });
@@ -68,10 +71,17 @@ namespace Daimayu.MinIO.Web.Controllers
 
         [HttpPost]
         [DisableRequestSizeLimit]
-        public async Task<IActionResult> UploadAsync([FromForm(Name = "file")] IFormFile file,string lang)
+        public async Task<IActionResult> UploadAsync([FromForm(Name = "file")] IFormFile file, string lang)
         {
             if (file != null)
             {
+                bool found = await _client.BucketExistsAsync(_bucket);
+                if (!found)
+                {
+                    await _client.MakeBucketAsync(_bucket);
+                    var jsonStr = "{\"Statement\":[{\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Resource\":[\"arn:aws:s3:::" + _bucket + "\"]},{\"Action\":[\"s3:GetObject\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Resource\":[\"arn:aws:s3:::" + _bucket + "/*\"]}],\"Version\":\"2012-10-17\"}";
+                    await _client.SetPolicyAsync(_bucket, jsonStr);
+                }
                 var type = Path.GetExtension(file.FileName);
                 var indexed = _indexedType.Contains(type);
                 var previewed = _previewType.Contains(type);
@@ -107,6 +117,11 @@ namespace Daimayu.MinIO.Web.Controllers
                 if (saved)
                 {
                     await _client.PutObjectAsync(_bucket, fileId + item.FileType, file.OpenReadStream(), file.Length);
+                    var size = file.Length / 1024d / 1024d;
+                    if (size > _tikaMaxSize)
+                    {
+                        indexed = false;
+                    }
                     if (indexed)
                     {
                         _dataService.UpdateStatus(item.FileId, FileStatus.PendingExtract);
@@ -117,27 +132,62 @@ namespace Daimayu.MinIO.Web.Controllers
                         _dataService.UpdateStatus(item.FileId, FileStatus.Uploaded);
                         _dataService.BuildIndex(item);
                     }
+                }else
+                {
+                    _logger.LogError("Upload file failed");
                 }
             }
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { _t = DateTime.UtcNow.Ticks });
         }
 
         private async Task CallTika(StoredItem item)
         {
+            _dataService.UpdateStatus(item.FileId, FileStatus.Extracting);
             item.Content = await _dataService.CallTikaAsync(item.FileId);
-            _dataService.UpdateStatus(item.FileId, FileStatus.Indexed);
+            var length = item.Content.Length;
+            string content;
+            if (length > 0)
+            {
+                if (length > 10000)
+                {
+                    content = item.Content.Substring(0, 10000);
+                }
+                else
+                {
+                    content = item.Content;
+                }
+            }
+            else
+            {
+                content = "{empty_content}";
+            }
+            
+            _dataService.UpdateStatus(item.FileId, FileStatus.Indexed, content);
             _dataService.BuildIndex(item);
         }
-
-        public async Task<IActionResult> DeleteAsync(string objectName)
+        public IActionResult Extracting(string fileId)
         {
-            await _client.RemoveObjectAsync(_bucket, objectName);
-            return RedirectToAction("Index");
+            var item = _dataService.Get(fileId);
+            _ = CallTika(item);
+            return RedirectToAction("Index", new { _t = DateTime.UtcNow.Ticks });
+        }
+
+        public async Task<IActionResult> DeleteAsync(string fileId)
+        {
+            var item = _dataService.Get(fileId);
+            _dataService.Delete(fileId);
+            _dataService.DeleteIndex(fileId);
+            await _client.RemoveObjectAsync(_bucket, $"{item.FileId}{item.FileType}");
+            return RedirectToAction("Index", new { _t = DateTime.UtcNow.Ticks });
         }
 
         public IActionResult Preview(string type,string fileId,string keyword)
         {
             var item = _dataService.Get(fileId);
+            if (item == null)
+            {
+                return RedirectToAction("Index", new { _t = DateTime.UtcNow.Ticks });
+            }
             item.DownloadUrl = $"http://{_endpoint}/{_bucket}/{fileId}{item.FileType}";
             ViewBag.PreviewType = type;
             ViewBag.Keyword = keyword;

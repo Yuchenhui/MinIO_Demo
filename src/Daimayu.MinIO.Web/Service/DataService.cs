@@ -17,9 +17,10 @@ namespace Daimayu.MinIO.Web.Service
         List<StoredItem> List(List<string> fileIds = null);
         bool Create(StoredItem item);
         bool Delete(string fileId);
-        bool UpdateStatus(string fileId, FileStatus status);
+        bool UpdateStatus(string fileId, FileStatus status, string content = null);
         Task<string> CallTikaAsync(string fileId);
         bool BuildIndex(StoredItem item);
+        bool DeleteIndex(string fileId);
         List<string> SearchIndex(string query);
         StoredItem Get(string fileId);
     }
@@ -69,7 +70,17 @@ namespace Daimayu.MinIO.Web.Service
         {
             try
             {
-                var indexResp = _esClient.Index(item, x => x.Index(_indexName));
+                var indexExist = _esClient.Indices.Exists(_indexName);
+                if (!indexExist.Exists)
+                {
+                    _esClient.Indices.Create(_indexName,
+                        x =>
+                        x.Settings(se => se.Setting("analysis.analyzer.my_analyzer.type", "custom")
+                        .Setting("analysis.analyzer.my_analyzer.tokenizer", "standard")
+                        .Setting("analysis.analyzer.my_analyzer.filter", "lowercase")));
+                }
+
+                var indexResp = _esClient.Index(item, x => x.Index(_indexName).Id(item.FileId));
                 return indexResp.IsValid;
             }
             catch (Exception e)
@@ -91,7 +102,7 @@ namespace Daimayu.MinIO.Web.Service
                 request.Headers.Add("X-Tika-OCRLanguage", item.Lang);
                 request.Headers.Add("fetcherName", "http");
                 request.Headers.Add("fetchKey", $"http://{_minioHost}/{item.Bucket}/{item.FileId}{item.FileType}");
-                client.Timeout = TimeSpan.MaxValue;
+                client.Timeout = TimeSpan.FromHours(3);
                 var resp = await client.SendAsync(request);
                 var result = await resp.Content.ReadAsStringAsync();
                 var html = "";
@@ -144,6 +155,20 @@ namespace Daimayu.MinIO.Web.Service
             }
         }
 
+        public bool DeleteIndex(string fileId)
+        {
+            try
+            {
+                var result = _esClient.Delete<StoredItem>(fileId);
+                return result.IsValid;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "DeleteIndex error");
+                return false;
+            }
+        }
+
         public StoredItem Get(string fileId)
         {
             try
@@ -161,10 +186,17 @@ namespace Daimayu.MinIO.Web.Service
         {
             try
             {
-                var q = _itemCollection.AsQueryable();
-                if (fileIds != null && fileIds.Any())
+                var q = _itemCollection.AsQueryable().Where(c => c.IsDeleted == false);
+                if (fileIds != null)
                 {
-                    return q.Where(c => fileIds.Contains(c.FileId)).ToList();
+                    if (fileIds.Any())
+                    {
+                        q = q.Where(c => fileIds.Contains(c.FileId));
+                    }
+                    else
+                    {
+                        return new List<StoredItem>();
+                    }
                 }
                 return q.ToList();
             }
@@ -186,7 +218,7 @@ namespace Daimayu.MinIO.Web.Service
                         .Query(q => q.QueryString(
                             qs => qs.Query(query)
                             .AllowLeadingWildcard(true)
-                            )                        
+                            )
                         )
                     );
                 }
@@ -198,20 +230,24 @@ namespace Daimayu.MinIO.Web.Service
                         )
                     );
                 }
-               return  results.Documents.Select(c => c.FileId).ToList();
+                return results.Documents.Select(c => c.FileId).ToList();
             }
             catch (Exception e)
-            {                
+            {
                 _logger.LogError(e, "List error");
                 return new List<string>();
             }
         }
 
-        public bool UpdateStatus(string fileId, FileStatus status)
+        public bool UpdateStatus(string fileId, FileStatus status, string content = null)
         {
             try
             {
                 var update = Builders<StoredItem>.Update.Set(c => c.FileStatus, status);
+                if (!string.IsNullOrEmpty(content))
+                {
+                    update.Set(c => c.Content, content);
+                }
                 _itemCollection.UpdateOneAsync(c => c.FileId == fileId, update);
                 return true;
             }

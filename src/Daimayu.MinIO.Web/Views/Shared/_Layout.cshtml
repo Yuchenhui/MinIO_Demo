@@ -3,28 +3,57 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - PwC.MinIO.Web</title>
+    <title>@ViewData["Title"] - File Center by PwC</title>
     <link href="~/lib/bootstrap/bootstrap-5.0.2-dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" />
+
+    @await RenderSectionAsync("Styles", required: false)
+    <style type="text/css">
+        a {
+            color: #979797;
+        }
+
+            a:hover {
+                color: #496d8b;
+            }
+        /*
+        .form-control {
+            border-color: #e45c2b;
+            color: #e45c2b
+        }
+
+        .form-select {
+            border-color: #e45c2b;
+            color: #e45c2b
+        }
+
+        .btn-outline-secondary {
+            color: #e45c2b;
+            border-color: #e45c2b;
+        }*/
+
+        .btn-outline-secondary:hover {
+            color: #fff;
+            border-color: #fb7c4d;
+            background-color: #fb7c4d;
+        }
+
+        /*.btn-outline-secondary:active {
+                color: #fff;
+                background-color: #efa333;
+                border-color: #efa333;
+            }*/
+    </style>
 </head>
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">PwC.MinIO.Web</a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+                <div class="align-content-start">
+                    <img src="~/img/PwC_fl_30mmh_c.jpg" style="width:90px" />
+                </div>
+                <div class="align-content-end">
+                    <img src="~/img/power_by_pwc.png" style="width:200px" />
                 </div>
             </div>
         </nav>
@@ -37,7 +66,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2021 - PwC.MinIO.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2021 - PwC File Center - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

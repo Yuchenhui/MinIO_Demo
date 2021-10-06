@@ -34,7 +34,7 @@ namespace Daimayu.MinIO.Web
             var en = Configuration["MinIO:Endpoint"];
             var reg = Configuration["MinIO:Region"];
             services.AddHttpClient();
-            services.AddControllersWithViews();
+            services.AddControllersWithViews().AddRazorRuntimeCompilation();
 
             var settings = Configuration.GetSection("Mongo").Get<MongoSettings>();
             services.AddSingleton(settings);

@@ -10,7 +10,7 @@ ARG JRE='openjdk-16-jre-headless'
 MAINTAINER marshall.c.yu@cn.pwc.com
 
 FROM base as dependencies
-
+RUN apt-get update --fix-missing
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install $JRE gdal-bin tesseract-ocr \
         tesseract-ocr-eng tesseract-ocr-ita tesseract-ocr-fra tesseract-ocr-chi-sim tesseract-ocr-chi-tra tesseract-ocr-spa tesseract-ocr-deu curl
 
