@@ -34,10 +34,24 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install gnupg2 \
     && sh -c "[ -f /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar.asc ]" || wget $ARCHIVE_TIKA_SERVER_ASC_URL -O /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar.asc || rm /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar.asc \
     && sh -c "[ -f /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar.asc ]" || exit 1 \
     && gpg --verify /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar.asc /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar
+	
 # now get the extra dependencies
 RUN wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-fetcher-http/${TIKA_VERSION}/tika-fetcher-http-${TIKA_VERSION}.jar -O /tika-fetcher-http-${TIKA_VERSION}.jar --no-check-certificate \
     && wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-fetcher-http/${TIKA_VERSION}/tika-fetcher-http-${TIKA_VERSION}.jar.asc -O /tika-fetcher-http-${TIKA_VERSION}.jar.asc --no-check-certificate \
     && gpg --verify /tika-fetcher-http-${TIKA_VERSION}.jar.asc /tika-fetcher-http-${TIKA_VERSION}.jar
+	
+RUN wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-emitter-fs/${TIKA_VERSION}/tika-emitter-fs-${TIKA_VERSION}.jar -O /tika-emitter-fs-${TIKA_VERSION}.jar --no-check-certificate \
+    && wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-emitter-fs/${TIKA_VERSION}/tika-emitter-fs-${TIKA_VERSION}.jar.asc -O /tika-emitter-fs-${TIKA_VERSION}.jar.asc --no-check-certificate \
+    && gpg --verify /tika-emitter-fs-${TIKA_VERSION}.jar.asc /tika-emitter-fs-${TIKA_VERSION}.jar
+	
+RUN wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-app/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar -O /tika-app-${TIKA_VERSION}.jar --no-check-certificate \
+    && wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-app/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar.asc -O /tika-app-${TIKA_VERSION}.jar.asc --no-check-certificate \
+    && gpg --verify /tika-app-${TIKA_VERSION}.jar.asc /tika-app-${TIKA_VERSION}.jar
+
+RUN wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-emitter-opensearch/${TIKA_VERSION}/tika-emitter-opensearch-${TIKA_VERSION}.jar -O /tika-emitter-opensearch-${TIKA_VERSION}.jar --no-check-certificate \
+    && wget -t 10 --max-redirect 1 --retry-connrefused https://repo1.maven.org/maven2/org/apache/tika/tika-emitter-opensearch/${TIKA_VERSION}/tika-emitter-opensearch-${TIKA_VERSION}.jar.asc -O /tika-emitter-opensearch-${TIKA_VERSION}.jar.asc --no-check-certificate \
+    && gpg --verify /tika-emitter-opensearch-${TIKA_VERSION}.jar.asc /tika-emitter-opensearch-${TIKA_VERSION}.jar
+
 
 FROM dependencies as runtime
 RUN apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -45,6 +59,11 @@ ENV TIKA_VERSION=$TIKA_VERSION
 RUN mkdir /tika-bin
 COPY --from=fetch_tika /${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar /tika-bin/${TIKA_SERVER_JAR}-${TIKA_VERSION}.jar
 COPY --from=fetch_tika /tika-fetcher-http-${TIKA_VERSION}.jar /tika-bin/tika-fetcher-http-${TIKA_VERSION}.jar
+COPY --from=fetch_tika /tika-emitter-fs-${TIKA_VERSION}.jar /tika-bin/tika-emitter-fs-${TIKA_VERSION}.jar
+COPY --from=fetch_tika /tika-app-${TIKA_VERSION}.jar /tika-bin/tika-app-${TIKA_VERSION}.jar
+COPY --from=fetch_tika /tika-emitter-opensearch-${TIKA_VERSION}.jar /tika-bin/tika-emitter-opensearch-${TIKA_VERSION}.jar
 COPY --from=fetch_tika /tika-config.xml /tika-config.xml
+COPY --from=fetch_tika /log4j2.xml /log4j2.xml
+COPY --from=fetch_tika /log4j2-async.xml /log4j2-async.xml
 EXPOSE 9998
 ENTRYPOINT [ "/bin/sh", "-c", "exec java -cp \"/tika-bin/*\" org.apache.tika.server.core.TikaServerCli -h 0.0.0.0 $0 $@"]
