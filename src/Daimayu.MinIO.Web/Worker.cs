@@ -32,9 +32,9 @@ namespace Daimayu.MinIO.Web
                     await Task.Delay(_time, stoppingToken);
                     _dataService.CheckExtract();
                 }
-                catch (OperationCanceledException)
+                catch (Exception e)
                 {
-                    break;
+                    _logger.LogError(e, "ExecuteAsync error");
                 }
             }
         }

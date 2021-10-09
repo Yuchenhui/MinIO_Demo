@@ -3,15 +3,14 @@
 }
 @model List<StoredItem>
 @section Styles{
-<link href="~/css/uppy.min.css" rel="stylesheet" />
-<style type="text/css">
+    <link href="~/css/uppy.min.css" rel="stylesheet" />
+    <style type="text/css">
 
-    .not-active {
-        pointer-events: none;
-        cursor: default;
-    }
-
-</style>
+        .not-active {
+            pointer-events: none;
+            cursor: default;
+        }
+    </style>
 }
 <div class="container">
     <div class="row">
@@ -21,12 +20,12 @@
 
                 <div class="input-group-append">
 
-@*                    <button type="button" class="btn btn-outline-secondary" id="uploadBtn">Upload</button>
-                    <button type="submit" style="display:none" id="submitBtn">Upload</button>
-                    <button class="btn btn-outline-secondary" type="button" disabled id="loadingBtn" style="display:none">
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                        <span class="visually-hidden">Loading...</span>
-                    </button>*@
+                    @*                    <button type="button" class="btn btn-outline-secondary" id="uploadBtn">Upload</button>
+                        <button type="submit" style="display:none" id="submitBtn">Upload</button>
+                        <button class="btn btn-outline-secondary" type="button" disabled id="loadingBtn" style="display:none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span class="visually-hidden">Loading...</span>
+                        </button>*@
 
                     <button type="button" class="btn btn-outline-secondary UppyModalOpenerBtn">Upload</button>
                 </div>
@@ -95,14 +94,14 @@
 
 </div>
 
-<div style="display:none" >
+<div style="display:none">
 
-       
+
 
 </div>
 @section Scripts{
 
-<script type="text/javascript">
+    <script type="text/javascript">
 
         $(document).ready(function () {
             $("#searchBtn").click(function () {
@@ -124,63 +123,72 @@
                 $("#searchTxt").prop("disabled", "disabled");
                 $("#searchBtn").prop("disabled", "disabled");
                 $("#langSel").prop("disabled", "disabled");
-                $(".actionTd").find("a").addClass("not-active").attr("onclick","javascript:void(0);");
+                $(".actionTd").find("a").addClass("not-active").attr("onclick", "javascript:void(0);");
                 $("#loadingBtn").show();
             });
-            var dic={};
-             var uppy = new Uppy.Core({
-      debug: true,
-      autoProceed: false,
-    })
+            var dic = {};
+            var uppy = new Uppy.Core({
+                debug: true,
+                autoProceed: false,
+            })
                 .use(Uppy.Dashboard, {
-                  inline: false,
-                  trigger: '.UppyModalOpenerBtn',
-                   showProgressDetails: true,
-      note: '',
-                  target: '#drag-drop-area',
-      browserBackButtonClose: false
+                    inline: false,
+                    trigger: '.UppyModalOpenerBtn',
+                    showProgressDetails: true,
+                    note: '',
+                    target: '#drag-drop-area',
+                    browserBackButtonClose: false
                 })
                 .use(Uppy.AwsS3,
-                    {  getUploadParameters (file) {
-        // Send a request to our PHP signing endpoint.
-        return fetch('/Home/Upload?file='+file.data.name+'&size='+file.data.size+'&lang='+$("#langSel").val(), {
-          method: 'post',
-          // Send and receive JSON.
-          headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
-          }),
-        }).then((response) => {
-          // Parse the JSON response.
-          return response.json()
-        }).then((data) => {
-            dic[file.id]=data.fileId;
-          // Return an object in the correct shape.
-          return {
-            method: data.method,
-            url: data.url,
-            fields: data.fields,
-            headers: data.headers,
-          }
-        })
-      }})
+                    {
+                        getUploadParameters(file) {
+                            // Send a request to our PHP signing endpoint.
+                            return fetch('/Home/Upload?file=' + file.data.name + '&size=' + file.data.size + '&lang=' + $("#langSel").val(), {
+                                method: 'post',
+                                // Send and receive JSON.
+                                headers: {
+                                    accept: 'application/json',
+                                    'content-type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    filename: file.name,
+                                    contentType: file.type,
+                                }),
+                            }).then((response) => {
+                                // Parse the JSON response.
+                                return response.json()
+                            }).then((data) => {
+                                dic[file.id] = data.fileId;
+                                // Return an object in the correct shape.
+                                return {
+                                    method: data.method,
+                                    url: data.url,
+                                    fields: data.fields,
+                                    headers: data.headers,
+                                }
+                            })
+                        }
+                    })
 
-         uppy.on('upload-success', (file, response) => {
-          $.post("@Url.Action("UploadCompleted","Home")?fileId="+dic[file.id],function(resp){});
+            uppy.on('upload-success', (file, response) => {
+                $.post("@Url.Action("UploadCompleted","Home")?fileId=" + dic[file.id], function (resp) { });
+            });
+            uppy.on('file-added', (file) => {
+                var sel = $(".uppy-StatusBar-actions").find("#langSel");
+                if (sel.length == 0) {
+                    $(".uppy-StatusBar-actions").append("<select style=\"margin-right: 20px;\" class=\"form-select\" name=\"lang\" id=\"langSel\"><option selected>Choose Lang</option><option value=\"eng\">English</option><option value=\"chi_sim\">Simplified Chinese</option><option value=\"chi_tra\">Traditional Chinese</option></select>");
+                }
+                else { sel.show(); }
+            });
+            uppy.on('upload', (result) => {
+                $("#langSel").hide();
+            });
+            uppy.on('dashboard:modal-closed', () => {
+                window.location.href = "@Url.Action("Index","Home")";
+            })
         });
-                uppy.on('file-added', (file) => {
-           var sel = $(".uppy-StatusBar-actions").find("#langSel");
-           if(sel.length==0){
-                $(".uppy-StatusBar-actions").append("<select style=\"margin-right: 20px;\" class=\"form-select\" name=\"lang\" id=\"langSel\"><option selected>Choose Lang</option><option value=\"eng\">English</option><option value=\"chi_sim\">Simplified Chinese</option><option value=\"chi_tra\">Traditional Chinese</option></select>");
-           }
-        });
-        });
 
 
-</script>
+    </script>
 
- }
+}

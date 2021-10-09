@@ -73,77 +73,6 @@ namespace Daimayu.MinIO.Web.Controllers
             return View(data);
         }
 
-        //[HttpPost]
-        //[DisableRequestSizeLimit]
-        //public async Task<IActionResult> UploadAsync([FromForm(Name = "file")] IFormFile file, string lang)
-        //{
-        //    if (file != null)
-        //    {
-        //        bool found = await _client.BucketExistsAsync(_bucket);
-        //        if (!found)
-        //        {
-        //            await _client.MakeBucketAsync(_bucket);
-        //            var jsonStr = "{\"Statement\":[{\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Resource\":[\"arn:aws:s3:::" + _bucket + "\"]},{\"Action\":[\"s3:GetObject\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Resource\":[\"arn:aws:s3:::" + _bucket + "/*\"]}],\"Version\":\"2012-10-17\"}";
-        //            await _client.SetPolicyAsync(_bucket, jsonStr);
-        //        }
-        //        var type = Path.GetExtension(file.FileName);
-        //        var indexed = _indexedType.Contains(type);
-        //        var previewed = _previewType.Contains(type);
-        //        var fileId = Guid.NewGuid().ToString("N");
-        //        var previewType = "";
-        //        if (previewed && _mediaType.ContainsKey(type))
-        //        {
-        //            previewType = _mediaType[type];
-        //        }
-        //        FileStatus status = FileStatus.Uploading;
-        //        var item = new StoredItem()
-        //        {
-        //            Bucket = _bucket,
-        //            Region = _region,
-        //            CreateTime = DateTime.UtcNow,
-        //            FileContentType = MimeTypeMap.GetMimeType(type),
-        //            Chunk = 1,
-        //            FileId = fileId,
-        //            FileDesc = file.FileName.Replace(".", " "),
-        //            FileLength = file.Length,
-        //            FileName = file.FileName,
-        //            FileStatus = status,
-        //            IsDeleted = false,
-        //            IsIndexed = indexed,
-        //            Number = DateTime.UtcNow.Ticks,
-        //            IsPreview = previewed,
-        //            Lang = lang,
-        //            FileType = type,
-        //            PreviewType = previewType
-        //        };
-
-        //        var saved = _dataService.Create(item);
-        //        if (saved)
-        //        {
-        //            await _client.PutObjectAsync(_bucket, fileId + item.FileType, file.OpenReadStream(), file.Length);
-        //            var size = file.Length / 1024d;
-        //            if (size > _tikaMaxSize)
-        //            {
-        //                indexed = false;
-        //            }
-        //            if (indexed)
-        //            {
-        //                _dataService.UpdateStatus(item.FileId, FileStatus.PendingExtract);
-        //                _ = CallTika(item);
-        //            }
-        //            else
-        //            {
-        //                _dataService.UpdateStatus(item.FileId, FileStatus.Uploaded);
-        //                _dataService.BuildIndex(item);
-        //            }
-        //        }else
-        //        {
-        //            _logger.LogError("Upload file failed");
-        //        }
-        //    }
-        //    return RedirectToAction("Index", new { _t = DateTime.UtcNow.Ticks });
-        //}
-
         private async Task CallTika(StoredItem item)
         {
             _dataService.UpdateStatus(item.FileId, FileStatus.Extracting);
@@ -206,7 +135,7 @@ namespace Daimayu.MinIO.Web.Controllers
                 Chunk = 1,
                 FileId = fileId,
                 FileDesc = file.Replace(".", " "),
-                FileLength = file.Length,
+                FileLength = size,
                 FileName = file,
                 FileStatus = status,
                 IsDeleted = false,
