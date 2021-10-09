@@ -176,7 +176,7 @@ namespace Daimayu.MinIO.Web.Controllers
             return RedirectToAction("Index", new { _t = DateTime.UtcNow.Ticks });
         }
 
-        [HttpGet]
+        [HttpPost]
         [DisableRequestSizeLimit]
         public async Task<IActionResult> UploadAsync(string file, long size, string lang)
         {

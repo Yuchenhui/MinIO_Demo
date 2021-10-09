@@ -17,21 +17,16 @@
     <div class="row">
         <form class="col-8" method="post" action="@Url.Action("Upload","Home")" enctype="multipart/form-data" id="uploadForm">
             <div class="input-group">
-                <input type="file" name="file" id="uploadFile" class="form-control w-50" aria-label="Text input with segmented dropdown button">
-                <select class="form-select" name="lang" id="langSel">
-                    <option selected>Choose Lang</option>
-                    <option value="eng">English</option>
-                    <option value="chi_sim">Simplified Chinese</option>
-                    <option value="chi_tra">Traditional Chinese</option>
-                </select>
+                @*<input type="file" name="file" id="uploadFile" class="form-control w-50" aria-label="Text input with segmented dropdown button">*@
+
                 <div class="input-group-append">
 
-                    <button type="button" class="btn btn-outline-secondary" id="uploadBtn">Upload</button>
+@*                    <button type="button" class="btn btn-outline-secondary" id="uploadBtn">Upload</button>
                     <button type="submit" style="display:none" id="submitBtn">Upload</button>
                     <button class="btn btn-outline-secondary" type="button" disabled id="loadingBtn" style="display:none">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                         <span class="visually-hidden">Loading...</span>
-                    </button>
+                    </button>*@
 
                     <button type="button" class="btn btn-outline-secondary UppyModalOpenerBtn">Upload</button>
                 </div>
@@ -97,6 +92,12 @@
             </tbody>
         </table>
     </div>
+
+</div>
+
+<div style="display:none" >
+
+       
 
 </div>
 @section Scripts{
@@ -167,10 +168,18 @@
           }
         })
       }})
+
          uppy.on('upload-success', (file, response) => {
-          $.post("@Url.Action("UploadCompleted","Home")?"+dic[file.id],function(resp){});
-        })
+          $.post("@Url.Action("UploadCompleted","Home")?fileId="+dic[file.id],function(resp){});
         });
+                uppy.on('file-added', (file) => {
+           var sel = $(".uppy-StatusBar-actions").find("#langSel");
+           if(sel.length==0){
+                $(".uppy-StatusBar-actions").append("<select style=\"margin-right: 20px;\" class=\"form-select\" name=\"lang\" id=\"langSel\"><option selected>Choose Lang</option><option value=\"eng\">English</option><option value=\"chi_sim\">Simplified Chinese</option><option value=\"chi_tra\">Traditional Chinese</option></select>");
+           }
+        });
+        });
+
 
 </script>
 
