@@ -7,7 +7,7 @@ RUN apt-get update --fix-missing
 ENV TIKA_VERSION 2.1.0
 ENV TIKA_SERVER_JAR tika-server-standard
 ARG JRE='openjdk-16-jre-headless'
-MAINTAINER marshall.c.yu@cn.pwc.com
+MAINTAINER yuchenhui@vip.sina.com
 
 FROM base as dependencies
 RUN apt-get update --fix-missing
